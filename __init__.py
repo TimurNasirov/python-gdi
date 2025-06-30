@@ -1,18 +1,21 @@
-import ctypes
 import win32gui
 import win32con
 import win32api
+import win32ui
+
+import ctypes
 from ctypes import windll
 from ctypes import c_int
 from ctypes import c_uint
 from ctypes import c_ulong
 from ctypes import POINTER
 from ctypes import byref
-from time import sleep, perf_counter, time
+
+from time import sleep, perf_counter
 from random import randint, choice
 from enum import Enum
 from os import system
-from threading import Thread
+from threading import Thread, Event
 
 def get_user32():
     user32 = ctypes.windll.user32
@@ -94,13 +97,17 @@ class __ClearWindow:
         except Exception:
             pass
 
-
         self.hwnd = win32gui.CreateWindowEx(win32con.WS_EX_TOPMOST | win32con.WS_EX_LAYERED | win32con.WS_EX_TOOLWINDOW, self.className, None,
-            win32con.WS_POPUP, 0, 0, size[0], size[1], None, None,
-            self.hInstance, None)
+            win32con.WS_POPUP, 0, 0, size[0], size[1], None, None, self.hInstance, None)
 
         win32gui.ShowWindow(self.hwnd, win32con.SW_SHOW)
         win32gui.UpdateWindow(self.hwnd)
+
+        self.hdc = win32gui.GetDC(self.hwnd)
+        self.dc = win32ui.CreateDCFromHandle(self.hdc)
+        self.dc.FillSolidRect((0, 0, 1920, 1080), win32api.RGB(255, 255, 255))  # White background
+        # OR
+        # self.dc.FillSolidRect((0, 0, 1920, 1080), win32api.RGB(0, 0, 0))  # Black background
 
     def wndProc(self, hwnd, msg, wParam, lParam):
         if msg == win32con.WM_DESTROY:
@@ -108,15 +115,16 @@ class __ClearWindow:
         return win32gui.DefWindowProc(hwnd, msg, wParam, lParam)
 
     def destroy(self):
+        # Release DC and Destroy Window
+        self.dc.DeleteDC()
         win32gui.DestroyWindow(self.hwnd)
-
-def clean(size):
-    wipe = __ClearWindow(size)
-    sleep(0.05)
+def clean():
+    wipe = __ClearWindow(get_size(get_user32()))
+    sleep(1)
     wipe.destroy()
 
 #from stackoverflow.com
-def bluescreen():
+def BSOD():
     windll.ntdll.RtlAdjustPrivilege(
         c_uint(19),
         c_uint(1),
@@ -145,23 +153,62 @@ class GDIdata:
 def get_gdi_data():
     size = get_size(get_user32())
     return get_window_hdc(), size[0], size[1]
-
 class GDIeffect:
-    def __init__(self, effect, start: int, end: int, delay: float = 0.1, add_time: bool = False, **kwargs):
+    """class for run gdi effects"""
+    def __init__(self, effect, start: int, end: int, delay: float = 0.1, **kwargs):
         self.effect = effect
         self.start = start
         self.end = end
         self.delay = delay
         self.run = False
-        self.add_time = add_time
         self.kwargs = kwargs
 
     def loop(self):
         self.run = True
         start = perf_counter()
         while self.run:
-            if self.add_time: self.effect(int((perf_counter() - start) * 1000), **self.kwargs)
-            else: self.effect(**self.kwargs)
+            self.effect(**self.kwargs)
+            sleep(self.delay)
+
+    def stop(self):
+        self.run = False
+
+class DataGDIeffect:
+    """class for run gdi effects that requires data"""
+    def __init__(self, effect, start: int, end: int, delay: float = 0.1, init_data: dict = {}, **kwargs):
+        self.effect = effect
+        self.start = start
+        self.end = end
+        self.delay = delay
+        self.run = False
+        self.kwargs = kwargs
+        self.data = init_data
+
+    def loop(self):
+        self.run = True
+        while self.run:
+            self.data = self.effect(self.data, **self.kwargs)
+            sleep(self.delay)
+        quit()
+
+    def stop(self):
+        self.run = False
+
+class TimeGDIeffect:
+    """class for run gdi effects that requires time"""
+    def __init__(self, effect, start: int, end: int, delay: float = 0.1, **kwargs):
+        self.effect = effect
+        self.start = start
+        self.end = end
+        self.delay = delay
+        self.run = False
+        self.kwargs = kwargs
+
+    def loop(self):
+        self.run = True
+        start = perf_counter()
+        while self.run:
+            self.effect(int((perf_counter() - start) * 1000), **self.kwargs)
             sleep(self.delay)
 
     def stop(self):
@@ -173,9 +220,11 @@ def run_gdi(effects: list[GDIeffect]):
         for eff in effects:
             if eff.start <= int((perf_counter() - start) * 1000) <= eff.end or eff.end == -1:
                 if not eff.run:
-                    eff.thread = Thread(target=eff.loop, daemon=True)
+                    eff.thread = Thread(target=eff.loop)
                     eff.thread.start()
             else:
                 if eff.run:
                     eff.stop()
+        if max([eff.end for eff in effects]) < int((perf_counter() - start) * 1000):
+            return
         sleep(0.001)

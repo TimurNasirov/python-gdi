@@ -1,12 +1,14 @@
-from enum import Enum
 import win32con
 import win32gui
 import win32api
+
+from pytrojantool import get_gdi_data
+
+from enum import Enum
 from os.path import exists
-from PIL import Image, ImageWin
-from __init__ import get_gdi_data
 from random import randint
 from threading import Thread
+from PIL import Image, ImageWin
 
 RESULTS = ['', 'Ok', 'Cancel', 'Abort', 'Retry', 'Ignore', 'Yes', 'No']
 class MessageBoxButton(Enum):

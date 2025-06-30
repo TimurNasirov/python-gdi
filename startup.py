@@ -1,4 +1,5 @@
 import winreg
+
 from os.path import join, expanduser
 from shutil import copy
 

@@ -1,5 +1,6 @@
 import ctypes
-import time
+
+from time import sleep
 from enum import Enum
 from random import randint
 
@@ -88,7 +89,7 @@ class AudioPlayer:
         winmm.waveOutWrite(self.hWaveOut, ctypes.byref(self.hdr), ctypes.sizeof(self.hdr))
 
         while not (self.hdr.dwFlags & 0x00000001):
-            time.sleep(0.01)
+            sleep(0.01)
 
         # self.stop()
 

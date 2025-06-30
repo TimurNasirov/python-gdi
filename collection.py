@@ -1,12 +1,15 @@
 from win32gui import *
 import win32con
 import win32api
-from __init__ import random_color, clean, get_cursor_pos, is_mouse_pressed, MouseButton, get_gdi_data
-from random import randint
-from enum import Enum
-from icon import draw, extract, IconSourceDLL, ShellIcon, UserIcon
 import ctypes
 import win32ui
+
+from pytrojantool import random_color, clean, get_cursor_pos, is_mouse_pressed, MouseButton, get_gdi_data
+from pytrojantool.icon import draw, extract, IconSourceDLL, ShellIcon, UserIcon
+
+from random import randint, randrange
+from enum import Enum
+from math import pi, ceil, cos, sin
 
 msimg32 = ctypes.windll.msimg32
 
@@ -17,6 +20,7 @@ class BLENDFUNCTION(ctypes.Structure):
         ("SourceConstantAlpha", ctypes.c_byte),
         ("AlphaFormat", ctypes.c_byte)
     ]
+
 def invert_colors(color=0xF0FFFF):
     """inverting colors"""
     #by CYBER SOLDIER https://www.youtube.com/watch?v=qnngjSVvpzM (codeFlane python adaptation)
@@ -148,11 +152,37 @@ def draw_icons_on_clicked_mouse(button=MouseButton.LEFT, icon=extract(IconSource
         cursor = get_cursor_pos()
         draw(hdc, cursor[0], cursor[1], icon)
 
+
 def random_errors(icon=extract(IconSourceDLL.USER, UserIcon.ERROR)):
     """draw icons on screen randomly"""
     #by Leo-Aqua
     hdc, w, h = get_gdi_data()
     draw(hdc, randint(0, w), randint(0, h), icon)
+
+def bw_hell(shake: int = 4):
+    """add black-white color filters with linees and shaking"""
+    hdc, w, h = get_gdi_data()
+    BitBlt(hdc, 0, 0, w, h, hdc, randrange(-shake, shake), randrange(-shake, shake), win32con.NOTSRCCOPY)
+
+def melt(y=1, size=10):
+    """make your screen melt"""
+    hdc, w, h = get_gdi_data()
+    x = randint(0, w)
+    BitBlt(hdc, x, y, size, h, hdc, x, 0, win32con.SRCCOPY)
+
+def shake(data, angle: int = 0, size: int = 1, speed: int = 5):
+    """shake/pan your screen (requires data)"""
+    if not data:
+        data = {'dx': 1, 'dy': 1, 'angle': angle}
+    hdc, w, h = get_gdi_data()
+    BitBlt(hdc, 0, 0, w, h, hdc, data['dx'], data['dy'], win32con.SRCCOPY)
+    data['dx'] = ceil(sin(data['angle']) * size * 10)
+    data['dy'] = ceil(cos(data['angle']) * size * 10)
+    data['angle'] += speed / 10
+    if data['angle'] > pi :
+        data['angle'] = pi * -1
+    return data
+
 
 def time_color_filter(t):
     """add color filter using current time (requires time)"""
@@ -201,8 +231,7 @@ def random_text(text='HYDROGEN', count=1):
     SetTextColor(hdc, win32api.RGB(randint(0,255), randint(0,255), randint(0,255)))
     for _ in range(count):
         dc.TextOut(randint(0, w), randint(0, h), text)
-    blend = BLENDFUNCTION(0, 0, 128, 0)
-    msimg32.AlphaBlend(hdc, 0, 0, w, h, hdc_mem, 0, 0, w, h, blend)
+    msimg32.AlphaBlend(hdc, 0, 0, w, h, hdc_mem, 0, 0, w, h, BLENDFUNCTION(0, 0, 128, 0))
     SelectObject(hdc_mem, old)
     DeleteObject(hbitmap)
     DeleteDC(hdc_mem)
@@ -211,8 +240,7 @@ def rotate_3d():
     """rotate your screen like 3d"""
     #by LeoLezury (from Hydrogen source code)
     hdc, w, h = get_gdi_data()
-    points = [(0, 0), (w, 0), (25, h)]
-    PlgBlt(hdc, points, hdc, 0, 0, w + 25, h, None, 0, 0)
+    PlgBlt(hdc, [(0, 0), (w, 0), (25, h)], hdc, 0, 0, w + 25, h, None, 0, 0)
 
 def random_circles_rects(t, text="     "):
     """draw black-white circles and rects in random position (requires time). You can add text to rect using "text" keyword argument"""
@@ -236,4 +264,3 @@ def random_circles_rects(t, text="     "):
     SelectObject(hdc_mem, old)
     DeleteObject(hbitmap)
     DeleteDC(hdc_mem)
-    win32api

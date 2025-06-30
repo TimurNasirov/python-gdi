@@ -2,7 +2,7 @@ import os
 from win32gui import ExtractIconEx, DrawIcon, StretchBlt
 from enum import Enum
 from win32con import SRCCOPY
-from __init__ import get_hdc, get_size, get_user32
+from pytrojantool import get_hdc, get_size, get_user32
 
 class IconSourceDLL(Enum):
     SHELL = r"C:\Windows\System32\Shell32.dll" #452 icons
